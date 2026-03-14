@@ -8,7 +8,7 @@ API_HASH = '0d37f945af68c74bce27e39b10a07d9c'
 SESSION_FILE = 'user_session'  # Имя файла сессии пользователя (не бота)
 # ===================
 
-async def get_last_announcements(channel_id, hashtag, limit=3, max_scan=100):
+def get_last_announcements(channel_id, hashtag, limit=3, max_scan=100):
     """
     Получает последние limit соо��щений из канала, содержащих hashtag,
     просматривая не более max_scan последних сообщений.
