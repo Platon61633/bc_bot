@@ -15,7 +15,9 @@ from aiogram.types import (
 from db import db
 from anons import repost_announcements_to_aiogram   # убрали импорт bot
 
-CHANEL = -1001922284221
+# CHANEL = -1001922284221    #id БК
+
+CHANEL = -1003865073475
 
 def setup_registration_handlers(dp: Dispatcher, bot: Bot):   # добавили параметр bot
     logging.basicConfig(level=logging.INFO)
@@ -59,13 +61,12 @@ def setup_registration_handlers(dp: Dispatcher, bot: Bot):   # добавили 
                 limit=3,
                 max_scan=200
             )
-            await message.answer("Готово.")
+            await message.answer("Это все актуальные мероприятия.")
         except Exception as e:
             await message.answer(f"Ошибка: {e}")
 
     @dp.message(CommandStart())
     async def cmd_start(message: Message, state: FSMContext):
-        # ... без изменений
         user_id = message.from_user.id
         user = await db.get_user(user_id) 
         if user:

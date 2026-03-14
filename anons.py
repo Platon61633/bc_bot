@@ -2,6 +2,7 @@ import os
 import tempfile
 import asyncio
 import re
+from functools import partial
 from datetime import date
 
 from telethon import TelegramClient
@@ -10,6 +11,9 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
+
+from db import db
+
 
 # ==== НАСТРОЙКИ ====
 # Telethon (как пользователь)
@@ -106,12 +110,11 @@ async def repost_announcements_to_aiogram(bot: Bot, chat_id: int, channel_id, ha
             if not (msg.text and hashtag in msg.text):
                 continue
             
+            # закомментированно для тестирования
             event_date = parse_event_date(msg.text)
             if event_date and event_date < date.today():
                 print(f"Пропускаем прошедшее мероприятие от {event_date}")
-                break   # не публикуем
-            else:
-                print(event_date, date.today())
+                break   # если встречаем мероприятие, которое уже прошло, то больше не ищем!!!!!!!
             
             # Формируем ссылку на оригинальный пост
             if isinstance(channel_id, str) and channel_id.startswith('@'):
@@ -121,11 +124,13 @@ async def repost_announcements_to_aiogram(bot: Bot, chat_id: int, channel_id, ha
                 if chat_id_for_link.startswith('-100'):
                     chat_id_for_link = chat_id_for_link[4:]
                 link = f"https://t.me/c/{chat_id_for_link}/{msg.id}"
-
+            
+            event_date_str = event_date.isoformat() if event_date else 'unknown'
+            callback_data = f"click:{event_date_str}"
             # Создаём клавиатуру с двумя кнопками
             kb = InlineKeyboardMarkup(inline_keyboard=[
                 [
-                    InlineKeyboardButton(text="Клик", callback_data=f"click:{msg.id}:{msg.chat_id}"),
+                    InlineKeyboardButton(text="Зарегистрироваться", callback_data=callback_data),
                     InlineKeyboardButton(text="🔗 Оригинал", url=link)
                 ]
             ])
@@ -172,12 +177,42 @@ async def cmd_anons(message: types.Message, bot: Bot):   # добавляем bo
         await message.answer(f"Ошибка: {e}")
 
 async def process_click(callback_query: types.CallbackQuery, bot: Bot):
-    payload = callback_query.data.split(':', 2)
-    await bot.answer_callback_query(callback_query.id, text="Клик зарегистрирован!")
-    # доп. логика
+    # callback_data = "click:YYYY-MM-DD" или "click:unknown"
+    parts = callback_query.data.split(':')
+    print(parts)
+    if len(parts) != 2:
+        await bot.answer_callback_query(callback_query.id, text="Ошибка данных")
+        return
 
-# Функция для регистрации обработчиков в главном диспетчере
+    _, event_date_str = parts
+    
+    if event_date_str == 'unknown':
+        await bot.answer_callback_query(callback_query.id, text="Дата мероприятия не определена")
+        return
+
+    try:
+        event_date = date.fromisoformat(event_date_str)
+    except ValueError:
+        await bot.answer_callback_query(callback_query.id, text="Некорректная дата")
+        return
+
+    user_id = callback_query.from_user.id
+
+    # Добавляем пользователя на мероприятие (только если оно есть в БД)
+    result = await db.add_user_to_event(event_date, user_id)
+
+    if result == 'added':
+        await bot.answer_callback_query(callback_query.id, text="✅ Вы записаны на мероприятие!")
+    elif result == 'already':
+        await bot.answer_callback_query(callback_query.id, text="⚠️ Вы уже были записаны")
+    elif result == 'not_found':
+        await bot.answer_callback_query(callback_query.id, text="❌ Мероприятие не найдено в базе (возможно, ещё не добавлено админом)")
+    else:
+        await bot.answer_callback_query(callback_query.id, text="❌ Сначала зарегистрируйтесь в боте через /start")
+
+    # Здесь можно добавить дополнительную логику, например, логирование
+
+    
 def setup_anons_handlers(dp, bot):
-    dp.message.register(lambda msg: cmd_anons(msg, bot), Command(commands=['anons']))
-    dp.callback_query.register(lambda c: process_click(c, bot), lambda c: c.data and c.data.startswith('click:'))
-    # Доп. логика регистрации/логирования здесь
+    dp.message.register(partial(cmd_anons, bot=bot), Command(commands=['anons']))
+    dp.callback_query.register(partial(process_click, bot=bot), lambda c: c.data and c.data.startswith('click:'))
