@@ -8,9 +8,9 @@ API_HASH = '0d37f945af68c74bce27e39b10a07d9c'
 SESSION_FILE = 'user_session'  # Имя файла сессии пользователя (не бота)
 # ===================
 
-async def get_last_announcements(channel_id, hashtag, limit=3, max_scan=100):
+def get_last_announcements(channel_id, hashtag, limit=3, max_scan=100):
     """
-    Получает последние limit сообщений из канала, содержащих hashtag,
+    Получает последние limit соо��щений из канала, содержащих hashtag,
     просматривая не более max_scan последних сообщений.
     
     :param channel_id: username канала (например '@bcmsu') или числовой ID
@@ -51,3 +51,9 @@ async def get_last_announcements(channel_id, hashtag, limit=3, max_scan=100):
 async def get_last_announcements_texts(channel_id, hashtag, limit=3, max_scan=100):
     msgs = await get_last_announcements(channel_id, hashtag, limit, max_scan)
     return [msg.text for msg in msgs if msg.text]
+
+# Обёртка, возвращающая сообщения с ID и текстом
+async def get_last_announcements_with_ids(channel_id, hashtag, limit=3, max_scan=100):
+    """Возвращает список словарей с ID и текстом сообщений"""
+    msgs = await get_last_announcements(channel_id, hashtag, limit, max_scan)
+    return [{"id": msg.id, "text": msg.text} for msg in msgs if msg.text]
