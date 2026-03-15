@@ -134,7 +134,7 @@ def setup_registration_handlers(dp: Dispatcher, bot: Bot):   # добавили 
             return
         await state.update_data(b_day=b_day_obj)
         await state.set_state(Registration.faculty)
-        await message.answer("Введите ваш факультет:")
+        await message.answer("Введите ваш вуз и факультет:")
 
     @dp.message(Registration.faculty)
     async def process_faculty(message: Message, state: FSMContext):

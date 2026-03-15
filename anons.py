@@ -179,7 +179,6 @@ async def cmd_anons(message: types.Message, bot: Bot):   # добавляем bo
 async def process_click(callback_query: types.CallbackQuery, bot: Bot):
     # callback_data = "click:YYYY-MM-DD" или "click:unknown"
     parts = callback_query.data.split(':')
-    print(parts)
     if len(parts) != 2:
         await bot.answer_callback_query(callback_query.id, text="Ошибка данных")
         return
